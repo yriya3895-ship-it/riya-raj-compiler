@@ -1,0 +1,148 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RIYA RAJ COMPILER</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101522;color:#f1f5f9;font-family:Arial,sans-serif}
+header{padding:20px;background:#1b2540;text-align:center}
+header h1{margin:0;color:#68e1fd}
+header p{margin:8px 0 0;color:#cbd5e1}
+main{max-width:1000px;margin:20px auto;padding:16px}
+.controls{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+select,button{padding:11px;border:0;border-radius:7px;font-size:14px}
+select{background:#26334e;color:white}
+button{background:#68e1fd;color:#101522;font-weight:bold;cursor:pointer}
+textarea{width:100%;min-height:300px;padding:16px;background:#080d18;color:#a7f3d0;border:1px solid #34425e;border-radius:8px;font:15px monospace;resize:vertical}
+h3{margin-bottom:8px}
+#output{white-space:pre-wrap;min-height:80px;background:#080d18;padding:15px;border-radius:8px;color:#a7f3d0;overflow:auto}
+#preview{width:100%;height:250px;background:white;border:0;border-radius:8px}
+.note{color:#cbd5e1;font-size:14px;line-height:1.5}
+</style>
+</head>
+<body>
+<header>
+<h1>RIYA RAJ COMPILER</h1>
+<p>Code Anything. Build Everything.</p>
+</header>
+<main>
+<div class="controls">
+<select id="language" onchange="changeLanguage()">
+<option value="javascript">JavaScript</option>
+<option value="html">HTML</option>
+<option value="css">CSS</option>
+</select>
+<button onclick="runCode()">▶ Run</button>
+<button onclick="saveCode()">Save</button>
+<button onclick="downloadCode()">Download</button>
+<button onclick="openCode()">Open File</button>
+<input id="filePicker" type="file" accept=".txt,.html,.css,.js,.py,.c,.cpp,.java,.php" hidden onchange="loadCode(event)">
+</div>
+<textarea id="editor" spellcheck="false">// Welcome to RIYA RAJ COMPILER
+console.log("Hello, bettu ji!");</textarea>
+<h3>Output</h3>
+<pre id="output">Your output will appear here.</pre>
+<h3>HTML Preview</h3>
+<iframe id="preview" sandbox="allow-scripts"></iframe>
+<p class="note">JavaScript and HTML/CSS can run in this browser preview. C, C++, Java, Python and PHP need a working compiler service to execute.</p>
+</main>
+<script>
+const editor=document.getElementById('editor');
+const language=document.getElementById('language');
+const output=document.getElementById('output');
+const preview=document.getElementById('preview');
+
+function changeLanguage(){
+ const lang=language.value;
+ const samples={
+ javascript:'console.log("Hello, bettu ji!");',
+ html:'<h1>Hello World!</h1><p>My first web page.</p>',
+ css:'body { background: lightblue; color: #222; font-family: Arial; }',
+ python:'print("Hello, bettu ji!")',
+ c:'#include <stdio.h>\nint main(){\n printf("Hello, bettu ji!");\n return 0;\n}',
+ cpp:'#include <iostream>\nusing namespace std;\nint main(){\n cout << "Hello, bettu ji!";\n return 0;\n}',
+ java:'class Main {\n public static void main(String[] args) {\n  System.out.println("Hello, bettu ji!");\n }\n}',
+ php:'<?php\necho "Hello, bettu ji!";\n?>'
+ };
+ editor.value=samples[lang];
+ output.textContent='Code ready. Click Run.';
+}
+
+function runCode(){
+ const lang=language.value;
+ const code=editor.value;
+ output.textContent='';
+ if(lang==='javascript'){
+  const logs=[];
+  const frame=document.createElement('iframe');
+  frame.sandbox='allow-scripts';
+  frame.hidden=true;
+  document.body.appendChild(frame);
+  frame.onload=()=>{
+   frame.contentWindow.postMessage({code},'*');
+  };
+  frame.srcdoc=`<script>
+  onmessage=function(e){
+   try{
+    const logs=[];
+    const oldLog=console.log;
+    console.log=(...args)=>logs.push(args.join(' '));
+    const result=(new Function(e.data.code))();
+    parent.postMessage({type:'done',logs},'*');
+   }catch(err){parent.postMessage({type:'error',message:err.message},'*')}
+  };
+  <\/script>`;
+  const listener=(e)=>{
+   if(e.data.type==='done'||e.data.type==='error'){
+    output.textContent=e.data.type==='done'?(e.data.logs.join('\n')||'Code executed. No output.'):'Error: '+e.data.message;
+    window.removeEventListener('message',listener);
+    frame.remove();
+   }
+  };
+  window.addEventListener('message',listener);
+ }else if(lang==='html'){
+  preview.srcdoc=code;
+  output.textContent='HTML preview updated.';
+ }else if(lang==='css'){
+  preview.srcdoc='<style>'+code+'</style><h2>CSS Preview</h2><p>Your CSS styles appear here.</p>';
+  output.textContent='CSS preview updated.';
+ }else{
+  output.textContent='This language needs a compiler service. It is not connected yet.';
+ }
+}
+
+function saveCode(){
+ try{
+  localStorage.setItem('riyaRajCompilerCode',editor.value);
+  localStorage.setItem('riyaRajCompilerLanguage',language.value);
+  output.textContent='Project saved in this browser!';
+ }catch(e){output.textContent='Save failed: '+e.message;}
+}
+
+function downloadCode(){
+ const extensions={javascript:'js',html:'html',css:'css',python:'py',c:'c',cpp:'cpp',java:'java',php:'php'};
+ const blob=new Blob([editor.value],{type:'text/plain'});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement('a');
+ a.href=url;
+ a.download='my-code.'+extensions[language.value];
+ a.click();
+ URL.revokeObjectURL(url);
+ output.textContent='Download started.';
+}
+
+function openCode(){document.getElementById('filePicker').click();}
+
+function loadCode(event){
+ const file=event.target.files[0];
+ if(!file)return;
+ const reader=new FileReader();
+ reader.onload=()=>{editor.value=reader.result;output.textContent='File opened: '+file.name;};
+ reader.readAsText(file);
+}
+</script>
+</body>
+</html>
